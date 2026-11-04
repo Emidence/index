@@ -1,0 +1,473 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Simulador Entrevista Consular</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo+Narrow:wght@500;700&family=Source+Sans+3:wght@400;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: una ventanilla consular en una sola columna; tarjeta del agente arriba, tu respuesta abajo */
+:root{
+  --bg:#eef1f4; --paper:#ffffff; --ink:#15233a; --muted:#5b6778; --line:#d3d9e1;
+  --accent:#9a6b1f; --accent-soft:#f4ead9; --navy:#1f3556;
+  --ok:#1f7a4d; --ok-bg:#e3f2ea; --warn:#a2650a; --warn-bg:#fbefd9; --bad:#b0352b; --bad-bg:#f8e2df;
+  --f-display:"Archivo Narrow","Arial Narrow",Arial,sans-serif;
+  --f-body:"Source Sans 3","Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1622; --paper:#172133; --ink:#e7ecf3; --muted:#9aa6b8; --line:#2b3950;
+  --accent:#d9a650; --accent-soft:#2e2a20; --navy:#9fb8de;
+  --ok:#5fc392; --ok-bg:#16301f; --warn:#e3b05a; --warn-bg:#33281a; --bad:#ef8a80; --bad-bg:#3a1f1d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1622; --paper:#172133; --ink:#e7ecf3; --muted:#9aa6b8; --line:#2b3950;
+  --accent:#d9a650; --accent-soft:#2e2a20; --navy:#9fb8de;
+  --ok:#5fc392; --ok-bg:#16301f; --warn:#e3b05a; --warn-bg:#33281a; --bad:#ef8a80; --bad-bg:#3a1f1d; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.5}
+.wrap{max-width:640px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;flex-direction:column;gap:16px}
+header{display:flex;align-items:center;gap:12px}
+.seal{width:44px;height:44px;flex:none}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-size:26px;line-height:1.1;margin:0;text-wrap:balance;color:var(--navy)}
+h2{font-family:var(--f-display);font-size:22px;margin:0;text-wrap:balance}
+h3{font-family:var(--f-display);font-size:18px;margin:0}
+.panel{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap}
+label.opt{flex:1 1 140px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;display:flex;gap:8px;align-items:center;cursor:pointer}
+label.opt:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.field-label{font-weight:700;font-size:14px}
+p{margin:0}
+.muted{color:var(--muted);font-size:14px}
+button{font:inherit;font-weight:700;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink);padding:11px 16px;cursor:pointer;min-height:44px}
+button.primary{background:var(--navy);border-color:var(--navy);color:var(--paper)}
+button.rec{border-color:var(--bad);color:var(--bad)}
+button.rec.on{background:var(--bad);color:var(--paper)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.5;cursor:default}
+.window{background:var(--navy);color:var(--paper);border-radius:10px;padding:18px;display:flex;gap:14px;align-items:flex-start}
+:root[data-theme="dark"] .window{color:#0f1622}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]) .window{color:#0f1622}}
+.agent{width:52px;height:52px;flex:none;border-radius:50%;background:var(--paper);display:grid;place-items:center}
+.agent svg{width:34px;height:34px}
+.qnum{font-family:var(--f-mono);font-size:12px;opacity:.8;letter-spacing:.06em}
+.qtext{font-family:var(--f-display);font-size:24px;line-height:1.2;text-wrap:balance}
+.qtext.hidden-text{filter:blur(7px);user-select:none}
+.speaking .agent{box-shadow:0 0 0 4px var(--accent)}
+.progress{height:4px;background:var(--line);border-radius:4px;overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);transition:width .3s}
+textarea{font:inherit;width:100%;box-sizing:border-box;min-height:110px;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--bg);color:var(--ink);resize:vertical}
+.timer{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-size:14px;color:var(--muted)}
+.timer.long{color:var(--warn)}
+.tip{background:var(--accent-soft);border-radius:8px;padding:10px 12px;font-size:14px}
+.verdict{border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.verdict.ok{background:var(--ok-bg);color:var(--ok)} .verdict.warn{background:var(--warn-bg);color:var(--warn)} .verdict.bad{background:var(--bad-bg);color:var(--bad)}
+.verdict .big{font-family:var(--f-display);font-size:26px;line-height:1.1}
+.verdict p{color:var(--ink)}
+.score{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.item{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:6px}
+.item:first-child{border-top:0;padding-top:0}
+.pill{display:inline-block;font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:20px;font-weight:500}
+.pill.bien{background:var(--ok-bg);color:var(--ok)} .pill.mejorable{background:var(--warn-bg);color:var(--warn)} .pill.riesgo{background:var(--bad-bg);color:var(--bad)}
+.ans{font-style:italic;color:var(--muted)}
+.better{border-left:3px solid var(--ok);padding-left:10px}
+ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.loading{display:flex;gap:10px;align-items:center}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--accent);animation:pulse 1s infinite alternate}
+@keyframes pulse{to{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.dot{animation:none}.progress span{transition:none}}
+.thread{display:flex;flex-direction:column;gap:8px}
+.msg{border-radius:8px;padding:10px 12px;font-size:15px}
+.msg.me{background:var(--bg);border:1px solid var(--line)}
+.msg.coach{background:var(--accent-soft)}
+.msg .who{font-family:var(--f-mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);display:block;margin-bottom:2px}
+button.link{background:none;border:0;color:var(--accent);padding:6px 0;min-height:36px;align-self:flex-start;text-decoration:underline;text-underline-offset:3px}
+.clar{display:flex;flex-direction:column;gap:8px}
+.clar textarea{min-height:80px}
+</style>
+<style>body{margin:0}[hidden]{display:none!important}</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <svg class="seal" viewBox="0 0 44 44" aria-hidden="true"><circle cx="22" cy="22" r="20" fill="none" stroke="var(--accent)" stroke-width="2"/><circle cx="22" cy="22" r="15" fill="none" stroke="var(--accent)" stroke-width="1" stroke-dasharray="2 2"/><text x="22" y="26.5" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="var(--navy)">B1/B2</text></svg>
+    <div>
+      <div class="eyebrow">Práctica · Embajada de EE. UU. en Tegucigalpa</div>
+      <h1>Simulador de entrevista consular</h1>
+    </div>
+  </header>
+
+  <!-- SETUP -->
+  <section id="setup" class="panel">
+    <h2>Prepárate para la ventanilla</h2>
+    <p class="muted">El agente te hará preguntas en voz alta, una por una. Respondes como lo harías mañana: corto, claro y con la verdad. Al final recibes un análisis de cada respuesta.</p>
+    <div>
+      <div class="field-label">Idioma de la entrevista</div>
+      <div class="row" style="margin-top:6px">
+        <label class="opt"><input type="radio" name="lang" id="lang-es" value="es" checked> Español</label>
+        <label class="opt"><input type="radio" name="lang" id="lang-en" value="en"> English</label>
+      </div>
+    </div>
+    <div>
+      <div class="field-label">Duración</div>
+      <div class="row" style="margin-top:6px">
+        <label class="opt"><input type="radio" name="len" id="len-6" value="6"> Rápida · 6</label>
+        <label class="opt"><input type="radio" name="len" id="len-9" value="9" checked> Normal · 9</label>
+        <label class="opt"><input type="radio" name="len" id="len-13" value="13"> Completa · 13</label>
+      </div>
+    </div>
+    <label class="opt" style="flex:none"><input type="checkbox" id="hideText"> Modo realista: ocultar el texto de la pregunta (solo escuchas)</label>
+    <div class="tip"><strong>Cómo responder con voz:</strong> espera a que el agente termine, toca <em>Grabar</em>, responde y toca <em>Detener</em>. La primera vez el navegador te pedirá permiso para el micrófono: acéptalo. Puedes corregir el texto antes de pasar a la siguiente.</div>
+    <button class="primary" id="startBtn">Iniciar entrevista</button>
+  </section>
+
+  <!-- INTERVIEW -->
+  <section id="interview" hidden>
+    <div class="panel">
+      <div class="progress"><span id="prog" style="width:0%"></span></div>
+      <div class="window" id="window">
+        <div class="agent"><svg viewBox="0 0 34 34" aria-hidden="true"><circle cx="17" cy="12" r="6" fill="var(--navy)"/><path d="M5 31c1-7 6-11 12-11s11 4 12 11z" fill="var(--navy)"/><path d="M14 20l3 5 3-5" fill="var(--accent)"/></svg></div>
+        <div style="min-width:0;display:flex;flex-direction:column;gap:4px">
+          <div class="qnum" id="qnum">PREGUNTA 1 DE 9</div>
+          <div class="qtext" id="qtext"></div>
+        </div>
+      </div>
+      <div class="row">
+        <button id="repeatBtn">Repetir pregunta</button>
+        <button id="revealBtn" hidden>Mostrar texto</button>
+      </div>
+      <label class="field-label" for="answer">Tu respuesta</label>
+      <textarea id="answer" placeholder="Habla con Grabar o dicta con el micrófono del teclado…"></textarea>
+      <div class="row" style="align-items:center;justify-content:space-between">
+        <button class="rec" id="recBtn">● Grabar con voz</button>
+        <span class="timer" id="timer">0 s</span>
+      </div>
+      <p class="muted" id="recMsg" hidden></p>
+      <button class="primary" id="nextBtn">Siguiente</button>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="results" hidden style="display:flex;flex-direction:column;gap:16px"></section>
+
+  <p class="muted" style="font-size:12px">Herramienta de práctica. No sustituye la información oficial de la Embajada ni garantiza el resultado de tu entrevista. Responde siempre con la verdad.</p>
+</div>
+
+<script>
+const BANK = [
+ {id:"proposito", fixed:"first", es:"¿Cuál es el propósito de su viaje a Estados Unidos?", en:"What is the purpose of your trip to the United States?", look:"Propósito concreto y coherente con visa B1/B2 (turismo, visita, compras, negocios breves). Debe decirse en una frase."},
+ {id:"destino", es:"¿A qué ciudad va y cuánto tiempo piensa quedarse?", en:"Which city are you going to and how long will you stay?", look:"Ciudad y duración específicas y razonables (días o pocas semanas), coherentes con su trabajo."},
+ {id:"trabajo", es:"¿A qué se dedica? ¿Dónde trabaja?", en:"What do you do for a living? Where do you work?", look:"Empleo o negocio claro, cargo y empresa. Es un vínculo clave con Honduras."},
+ {id:"antiguedad", es:"¿Cuánto tiempo lleva en ese trabajo?", en:"How long have you been working there?", look:"Estabilidad laboral; respuesta exacta en años o meses."},
+ {id:"ingreso", es:"¿Cuánto gana al mes?", en:"How much do you earn per month?", look:"Cifra directa y sin titubeos, coherente con el cargo y con poder pagar el viaje."},
+ {id:"familia", es:"¿Es casado? ¿Tiene hijos?", en:"Are you married? Do you have children?", look:"Datos familiares claros; familia en Honduras es vínculo de arraigo."},
+ {id:"familiares_eeuu", es:"¿Tiene familiares en Estados Unidos?", en:"Do you have relatives in the United States?", look:"Honestidad total. Tener familia allá no es malo; ocultarlo sí. Mencionar estatus legal si lo sabe."},
+ {id:"viajes", es:"¿Ha viajado antes a otros países?", en:"Have you traveled to other countries before?", look:"Historial de viajes y regreso a tiempo; si no ha viajado, decirlo con naturalidad."},
+ {id:"paga", es:"¿Quién paga su viaje?", en:"Who is paying for your trip?", look:"Solvencia: idealmente él mismo o alguien con relación clara; coherente con ingresos."},
+ {id:"acompanantes", es:"¿Con quién viaja?", en:"Who are you traveling with?", look:"Respuesta simple y coherente con el propósito."},
+ {id:"hospedaje", es:"¿Dónde se va a hospedar?", en:"Where will you be staying?", look:"Hotel o dirección de quien lo recibe; plan concreto."},
+ {id:"previas", es:"¿Ha solicitado visa antes? ¿Alguna vez se la han negado?", en:"Have you applied for a visa before? Has it ever been denied?", look:"Honestidad sobre negaciones previas y qué cambió desde entonces."},
+ {id:"propiedades", es:"¿Tiene casa, terreno, vehículo o algún negocio a su nombre en Honduras?", en:"Do you own a house, land, a vehicle or a business in Honduras?", look:"Bienes o compromisos que lo atan al país; no es obligatorio tenerlos, sí responder claro."},
+ {id:"regreso", fixed:"last", es:"¿Qué le garantiza que va a regresar a Honduras?", en:"What guarantees that you will return to Honduras?", look:"Pregunta clave (sección 214(b)): resumir vínculos reales: trabajo, familia, estudios, bienes, compromisos con fecha."}
+];
+const UI = {
+  es:{q:"PREGUNTA",of:"DE",next:"Siguiente",finish:"Terminar y analizar"},
+  en:{q:"QUESTION",of:"OF",next:"Next",finish:"Finish and analyze"}
+};
+let S = {lang:"es", qs:[], i:0, answers:[], t0:0, timerId:null, rec:null, recording:false, hide:false};
+const $ = id => document.getElementById(id);
+
+function pickQuestions(n){
+  const first = BANK.find(q=>q.fixed==="first"), last = BANK.find(q=>q.fixed==="last");
+  const mid = BANK.filter(q=>!q.fixed);
+  // conservar orden lógico pero elegir al azar cuáles entran
+  const chosen = mid.map(q=>({q,r:Math.random()})).sort((a,b)=>a.r-b.r).slice(0,n-2).map(x=>x.q);
+  chosen.sort((a,b)=>BANK.indexOf(a)-BANK.indexOf(b));
+  return [first,...chosen,last];
+}
+
+/* ---------- Voz del agente ---------- */
+let voices = [];
+function loadVoices(){ try{ voices = speechSynthesis.getVoices(); }catch(e){} }
+try{ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }catch(e){}
+function speak(text){
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    const pref = S.lang==="es" ? ["es-US","es-MX","es-419","es"] : ["en-US","en"];
+    let v=null; for(const p of pref){ v = voices.find(x=>x.lang && x.lang.replace("_","-").startsWith(p)); if(v) break; }
+    if(v) u.voice=v; u.lang = S.lang==="es"?"es-US":"en-US"; u.rate = 0.98;
+    $("window").classList.add("speaking");
+    u.onend = u.onerror = ()=>{ $("window").classList.remove("speaking"); startTimer(); };
+    speechSynthesis.speak(u);
+  }catch(e){ startTimer(); }
+}
+
+/* ---------- Temporizador ---------- */
+function startTimer(){
+  clearInterval(S.timerId); S.t0 = Date.now();
+  S.timerId = setInterval(()=>{ const s=Math.round((Date.now()-S.t0)/1000); $("timer").textContent = s+" s"; $("timer").classList.toggle("long", s>30); },500);
+}
+
+/* ---------- Grabación (reconocimiento de voz) ---------- */
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+// Dentro de la app de Claude (o cualquier marco aislado) el micrófono está bloqueado.
+const SANDBOXED = (()=>{ try{ return !!window.claude || window.self!==window.top; }catch(e){ return true; } })();
+function showRecMsg(t){ $("recMsg").textContent=t; $("recMsg").hidden=false; }
+let finalTxt="", langIdx=0, emptyRuns=0, lastStart=0, fastFails=0;
+const LANGS = {es:["es-HN","es-US","es-MX"], en:["en-US"]};
+function stopRec(){
+  S.recording=false;
+  if(S.rec){ const r=S.rec; S.rec=null; r.onend=null; r.onresult=null; r.onerror=null; try{r.abort();}catch(e){} }
+  $("recBtn").classList.remove("on"); $("recBtn").textContent="● Grabar con voz";
+}
+function startEngine(){
+  const r = new SR(); S.rec=r; let gotSomething=false;
+  r.lang = LANGS[S.lang][Math.min(langIdx,LANGS[S.lang].length-1)];
+  r.continuous=false; r.interimResults=true; r.maxAlternatives=1;
+  r.onresult = e=>{
+    gotSomething=true; emptyRuns=0;
+    let interim="";
+    for(let k=e.resultIndex;k<e.results.length;k++){
+      const t=e.results[k][0].transcript.trim();
+      if(e.results[k].isFinal){ if(t) finalTxt += (finalTxt?" ":"")+t; } else interim += t;
+    }
+    $("answer").value = finalTxt + (interim?(finalTxt?" ":"")+interim:"");
+  };
+  r.onerror = e=>{
+    if(e.error==="no-speech"||e.error==="aborted") return;
+    if(e.error==="language-not-supported" && langIdx<LANGS[S.lang].length-1){ langIdx++; return; }
+    stopRec();
+    showRecMsg(e.error==="not-allowed"||e.error==="service-not-allowed"
+      ? "El micrófono está bloqueado. Toca el candado junto a la dirección web → Permisos → Micrófono → Permitir, y recarga la página."
+      : e.error==="network" ? "Sin conexión con el servicio de voz. Revisa tu internet."
+      : e.error==="audio-capture" ? "Otra app está usando el micrófono. Ciérrala y vuelve a intentar."
+      : "No se pudo grabar ("+e.error+").");
+  };
+  r.onend = ()=>{
+    if(!S.recording || S.rec!==r) return;
+    if(!gotSomething) emptyRuns++;
+    fastFails = (Date.now()-lastStart<700) ? fastFails+1 : 0;
+    // Si no oye nada por un rato o el motor falla en bucle, se apaga solo para liberar el micrófono.
+    if(emptyRuns>=3 || fastFails>=3){ stopRec(); if(fastFails>=3) showRecMsg("El reconocimiento de voz no responde en este navegador. Usa el micrófono del teclado."); return; }
+    try{ lastStart=Date.now(); startEngine(); }catch(err){ stopRec(); }
+  };
+  lastStart=Date.now(); r.start();
+}
+async function askMicPermission(){
+  if(!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) return true;
+  try{ const st = await navigator.mediaDevices.getUserMedia({audio:true}); st.getTracks().forEach(t=>t.stop()); return true; }
+  catch(e){
+    showRecMsg(e && e.name==="NotAllowedError"
+      ? "No diste permiso al micrófono. Toca el candado junto a la dirección web → Permisos → Micrófono → Permitir, y recarga."
+      : "No se encontró un micrófono disponible.");
+    return false;
+  }
+}
+if(SANDBOXED || !SR){
+  $("recBtn").hidden = true;
+  showRecMsg(SANDBOXED
+    ? "Aquí el micrófono de la página está bloqueado. Toca el cuadro de respuesta y usa el micrófono de tu teclado, o abre el archivo index.html en Chrome para grabar con voz."
+    : "Este navegador no reconoce voz. Usa el micrófono de tu teclado, o abre la página en Chrome.");
+}
+$("recBtn").addEventListener("click", async ()=>{
+  if(S.recording){ stopRec(); return; }
+  try{ speechSynthesis.cancel(); }catch(e){}
+  $("recMsg").hidden=true;
+  if(!(await askMicPermission())) return;
+  finalTxt = $("answer").value.trim(); emptyRuns=0; fastFails=0;
+  S.recording=true; $("recBtn").classList.add("on"); $("recBtn").textContent="■ Detener";
+  try{ startEngine(); }catch(e){ stopRec(); showRecMsg("No se pudo iniciar la grabación."); }
+});
+// Si tocas el cuadro para dictar con el teclado, la grabación de la página se apaga y libera el micrófono.
+$("answer").addEventListener("focus",()=>{ if(S.recording) stopRec(); });
+$("answer").addEventListener("input",()=>{ if(!S.recording) finalTxt=$("answer").value.trim(); });
+
+/* ---------- Flujo ---------- */
+function showQ(){
+  const q = S.qs[S.i], n=S.qs.length, u=UI[S.lang];
+  $("qnum").textContent = `${u.q} ${S.i+1} ${u.of} ${n}`;
+  $("qtext").textContent = q[S.lang];
+  $("qtext").classList.toggle("hidden-text", S.hide);
+  $("revealBtn").hidden = !S.hide;
+  $("answer").value = ""; $("timer").textContent="0 s"; $("timer").classList.remove("long");
+  $("prog").style.width = (S.i/n*100)+"%";
+  $("nextBtn").textContent = S.i===n-1 ? u.finish : u.next;
+  speak(q[S.lang]);
+}
+$("startBtn").addEventListener("click",()=>{
+  S.lang = document.querySelector('input[name=lang]:checked').value;
+  S.hide = $("hideText").checked;
+  const n = +document.querySelector('input[name=len]:checked').value;
+  S.qs = pickQuestions(n); S.i=0; S.answers=[];
+  $("setup").hidden=true; $("results").hidden=true; $("interview").hidden=false;
+  showQ();
+});
+$("repeatBtn").addEventListener("click",()=>speak(S.qs[S.i][S.lang]));
+$("revealBtn").addEventListener("click",()=>{ $("qtext").classList.remove("hidden-text"); $("revealBtn").hidden=true; });
+$("nextBtn").addEventListener("click",()=>{
+  stopRec(); try{speechSynthesis.cancel();}catch(e){}
+  const secs = S.t0 ? Math.round((Date.now()-S.t0)/1000) : 0;
+  clearInterval(S.timerId);
+  const q=S.qs[S.i];
+  S.answers.push({id:q.id, pregunta:q[S.lang], criterio:q.look, respuesta:$("answer").value.trim(), segundos:secs});
+  S.i++;
+  if(S.i<S.qs.length) showQ(); else finish();
+});
+
+/* ---------- Análisis ---------- */
+async function finish(){
+  $("interview").hidden=true; const R=$("results"); R.hidden=false;
+  R.innerHTML = `<div class="panel"><div class="loading"><span class="dot"></span><span>Analizando tus respuestas…</span></div></div>`;
+  let result=null;
+  try{
+    const sample = window.claude ? await window.claude.use("sample") : null;
+    if(sample){
+      const prompt = `Eres un coach experto en entrevistas consulares para visa de no inmigrante B1/B2 en la Embajada de EE. UU. en Tegucigalpa, Honduras. Evalúa una entrevista de práctica. El cónsul decide en 2-3 minutos según la sección 214(b): el solicitante debe demostrar vínculos fuertes con Honduras, propósito claro, solvencia y consistencia. Valora respuestas breves (1-2 frases), directas, seguras, honestas y coherentes entre sí. Penaliza respuestas vacías, evasivas, titubeantes, demasiado largas, contradictorias o memorizadas. Las respuestas pueden venir de dictado por voz con errores de transcripción: no los penalices.
+Reglas: nunca sugieras mentir ni inventar datos. En "mejor_respuesta" usa SOLO los datos que dio el solicitante; si falta un dato, pon un marcador entre corchetes como [nombre de la empresa]. Escribe todo en español. La entrevista fue en ${S.lang==="es"?"español":"inglés"}; si fue en inglés, la "mejor_respuesta" va en inglés y además evalúa la claridad del inglés.
+
+Entrevista (JSON): ${JSON.stringify(S.answers)}
+
+Devuelve SOLO JSON con esta forma:
+{"puntaje":0-100,"veredicto":"bien"|"mejorable"|"riesgo","resumen":"2-3 frases","fortalezas":["..."],"mejorar":["..."],"consistencia":"1-2 frases sobre contradicciones o coherencia entre respuestas","items":[{"id":"...","calificacion":"bien"|"mejorable"|"riesgo","comentario":"1-2 frases concretas","mejor_respuesta":"..."}],"consejos_dia":["3-4 consejos prácticos para mañana"]}`;
+      result = await sample.json(prompt,{modelTier:"default", cache:false});
+    }
+  }catch(e){ result=null; }
+  if(!result || !Array.isArray(result.items)) result = localAnalysis();
+  render(result);
+}
+
+function localAnalysis(){
+  const hedge = /\b(no s[eé]|creo que|tal vez|quiz[aá]s|pues|este+|maybe|i think|i guess|not sure|um+)\b/i;
+  const ties = /(trabaj|emple|empresa|banco|famil|hij|espos|casa|terreno|negocio|estudi|job|work|family|children|wife|husband|house|business|company)/i;
+  const items = S.answers.map(a=>{
+    const w = a.respuesta ? a.respuesta.split(/\s+/).length : 0;
+    let cal="bien", c=[];
+    if(w===0){cal="riesgo"; c.push("No respondiste. En la ventanilla el silencio genera desconfianza.");}
+    else{
+      if(w<3 && !["acompanantes","previas","familiares_eeuu","familia"].includes(a.id)){cal="mejorable"; c.push("Muy corta; agrega el dato concreto.");}
+      if(w>45){cal="mejorable"; c.push("Demasiado larga; el cónsul espera 1-2 frases.");}
+      if(hedge.test(a.respuesta)){cal="mejorable"; c.push("Hay titubeos; responde con seguridad.");}
+      if(a.id==="regreso" && !ties.test(a.respuesta)){cal="riesgo"; c.push("No mencionas vínculos concretos (trabajo, familia, bienes).");}
+      if(a.segundos>40) c.push("Tardaste "+a.segundos+" s; practica para responder más rápido.");
+      if(!c.length) c.push("Respuesta clara y de buena extensión.");
+    }
+    return {id:a.id, calificacion:cal, comentario:c.join(" "), mejor_respuesta:""};
+  });
+  const pts = {bien:100,mejorable:60,riesgo:20};
+  const puntaje = Math.round(items.reduce((s,i)=>s+pts[i.calificacion],0)/items.length);
+  return {puntaje, veredicto: puntaje>=80?"bien":puntaje>=55?"mejorable":"riesgo",
+    resumen:"Análisis rápido de extensión, seguridad y vínculos con Honduras. Para el análisis completo, copia tu entrevista abajo y pégala en el chat con Claude.",
+    fortalezas:items.filter(i=>i.calificacion==="bien").length?["Varias respuestas claras y de buena extensión."]:[],
+    mejorar:["Responde en 1-2 frases con datos exactos.","En la pregunta de regreso, resume trabajo, familia y bienes."],
+    consistencia:"", items, consejos_dia:["Lleva tu constancia de trabajo y comprobantes de ingresos, aunque quizá no te los pidan.","Escucha la pregunta completa y responde solo eso.","Mira al cónsul y habla con calma."]};
+}
+
+function esc(s){ const d=document.createElement("div"); d.textContent=s==null?"":String(s); return d.innerHTML; }
+function render(r){
+  S.result=r; for(const k in THREADS) delete THREADS[k];
+  const map={bien:["ok","Buena entrevista"],mejorable:["warn","Puedes mejorar"],riesgo:["bad","Riesgo de negación"]};
+  const [cls,label]=map[r.veredicto]||map.mejorable;
+  const list = a => (a&&a.length)? "<ul>"+a.map(x=>"<li>"+esc(x)+"</li>").join("")+"</ul>" : '<p class="muted">—</p>';
+  const items = S.answers.map(a=>{
+    const it = (r.items||[]).find(x=>x.id===a.id) || {};
+    const cal = it.calificacion||"mejorable";
+    return `<div class="item" id="it-${a.id}">
+      <div class="row" style="align-items:center;justify-content:space-between"><h3>${esc(a.pregunta)}</h3><span class="pill ${esc(cal)}">${esc(cal)}</span></div>
+      <p class="ans">“${esc(a.respuesta||"(sin respuesta)")}” <span class="timer">· ${a.segundos} s</span></p>
+      <p class="cmt">${esc(it.comentario)}</p>
+      <p class="better" ${it.mejor_respuesta?"":"hidden"}><strong>Mejor así:</strong> <span>${esc(it.mejor_respuesta)}</span></p>
+      ${clarifyBlock(a.id,"Aclarar esta observación")}
+    </div>`;}).join("");
+  $("results").innerHTML = `
+    <div class="verdict ${cls}"><span class="eyebrow" style="color:inherit">Resultado de la práctica · <span class="score">${esc(r.puntaje)}/100</span></span><span class="big">${label}</span><p>${esc(r.resumen)}</p>${r.consistencia?`<p><strong>Coherencia:</strong> ${esc(r.consistencia)}</p>`:""}</div>
+    <div class="panel"><h2>Lo que hiciste bien</h2>${list(r.fortalezas)}<h2>Qué mejorar</h2>${list(r.mejorar)}${clarifyBlock("general","Aclarar o preguntar sobre el análisis general")}</div>
+    <div class="panel"><h2>Pregunta por pregunta</h2>${items}</div>
+    <div class="panel"><h2>Para mañana</h2>${list(r.consejos_dia)}</div>
+    <div class="panel"><h2>Análisis detallado con Claude</h2><p class="muted">Copia tu entrevista y pégala en el chat con Claude para recibir el análisis completo y una mejor versión de cada respuesta.</p><button class="primary" id="copyBtn">Copiar entrevista</button><p class="muted" id="copyMsg" hidden></p><textarea id="copyBox" readonly hidden></textarea></div>
+    <div class="row"><button class="primary" id="againBtn">Nueva entrevista</button><button id="sameBtn">Repetir mismas preguntas</button></div>`;
+  $("copyBtn").onclick=()=>{
+    const txt = "Analiza mi práctica de entrevista para visa B1/B2 (Embajada de EE. UU. en Tegucigalpa). Dime qué respondí bien, qué debo mejorar, si hay contradicciones y una mejor versión de cada respuesta usando solo mis datos.\n\n" +
+      S.answers.map((a,k)=>`${k+1}. ${a.pregunta}\nMi respuesta (${a.segundos} s): ${a.respuesta||"(sin respuesta)"}`).join("\n\n");
+    const done=m=>{ $("copyMsg").textContent=m; $("copyMsg").hidden=false; };
+    const fallback=()=>{ const b=$("copyBox"); b.value=txt; b.hidden=false; b.focus(); b.select(); done("Selecciona el texto de abajo y cópialo."); };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(()=>done("Copiado. Pégalo en tu chat con Claude."),fallback); else fallback();
+  };
+  $("againBtn").onclick=()=>{ $("results").hidden=true; $("setup").hidden=false; window.scrollTo(0,0); };
+  $("sameBtn").onclick=()=>{ S.i=0; S.answers=[]; $("results").hidden=true; $("interview").hidden=false; window.scrollTo(0,0); showQ(); };
+  window.scrollTo(0,0);
+}
+/* ---------- Aclaraciones sobre las observaciones ---------- */
+const THREADS = {};
+function threadHtml(id){
+  return (THREADS[id]||[]).map(m=>`<div class="msg ${m.role}"><span class="who">${m.role==="me"?"Tú":"Coach"}</span>${esc(m.text)}</div>`).join("");
+}
+function clarifyBlock(id, label){
+  return `<div class="thread" id="th-${id}">${threadHtml(id)}</div>
+    <button class="link" data-clar="${id}">${label}</button>
+    <div class="clar" id="cl-${id}" hidden>
+      <label class="muted" for="ct-${id}">Explica tu situación o pregunta lo que no te quedó claro</label>
+      <textarea id="ct-${id}" placeholder="Ej.: Sí tengo constancia de trabajo, solo no lo mencioné… / ¿Por qué es malo decir que voy donde mi hermano?"></textarea>
+      <div class="row"><button class="primary" data-send="${id}">Enviar aclaración</button><button data-cancel="${id}">Cancelar</button></div>
+      <p class="muted" id="cm-${id}" hidden></p>
+    </div>`;
+}
+async function sendClarification(id){
+  const box=$("ct-"+id), txt=box.value.trim(); if(!txt) { box.focus(); return; }
+  const msg=$("cm-"+id), btn=document.querySelector(`[data-send="${id}"]`);
+  const isGeneral = id==="general";
+  const ans = S.answers.find(a=>a.id===id);
+  const item = (S.result.items||[]).find(x=>x.id===id) || {};
+  let sample=null; try{ sample = window.claude ? await window.claude.use("sample") : null; }catch(e){}
+  if(!sample){
+    const copy = `Sobre mi práctica de entrevista de visa B1/B2. ${isGeneral?"Sobre el análisis general":"Pregunta: "+ans.pregunta+"\nMi respuesta: "+(ans.respuesta||"(sin respuesta)")+"\nObservación que me diste: "+(item.comentario||"")}\nMi aclaración: ${txt}`;
+    const done=m=>{ msg.textContent=m; msg.hidden=false; };
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(copy).then(()=>done("Aquí no puedo responderte directamente. Copié tu aclaración: pégala en el chat con Claude."),()=>done("Aquí no puedo responderte directamente. Copia tu aclaración y pégala en el chat con Claude."));
+    else done("Aquí no puedo responderte directamente. Copia tu aclaración y pégala en el chat con Claude.");
+    return;
+  }
+  btn.disabled=true; msg.textContent="Revisando tu aclaración…"; msg.hidden=false;
+  (THREADS[id]=THREADS[id]||[]).push({role:"me",text:txt});
+  const prompt = `Eres un coach experto en entrevistas consulares para visa B1/B2 en la Embajada de EE. UU. en Tegucigalpa, Honduras (criterio sección 214(b): vínculos con Honduras, propósito claro, solvencia, coherencia, respuestas breves y seguras). Ya diste un análisis de una entrevista de práctica y el solicitante quiere aclarar o preguntar algo sobre una observación.
+Reglas: nunca sugieras mentir, ocultar ni inventar datos. Si su aclaración aporta un dato real nuevo, úsalo para mejorar la respuesta sugerida. Si su aclaración no cambia el riesgo, explícale por qué con respeto y claridad. Si tiene razón, reconócelo y ajusta la calificación. Responde en español, en 2-4 frases concretas.
+
+Entrevista completa: ${JSON.stringify(S.answers)}
+${isGeneral ? "Análisis general que diste: "+JSON.stringify({veredicto:S.result.veredicto,resumen:S.result.resumen,mejorar:S.result.mejorar,consistencia:S.result.consistencia}) : "Pregunta en discusión: "+JSON.stringify(ans)+"\nTu observación: "+JSON.stringify(item)}
+Conversación previa sobre esta observación: ${JSON.stringify((THREADS[id]||[]).slice(0,-1))}
+Aclaración del solicitante: ${JSON.stringify(txt)}
+
+Devuelve SOLO JSON: {"respuesta":"tu explicación para él",${isGeneral?"":'"calificacion":"bien"|"mejorable"|"riesgo","comentario":"observación actualizada en 1-2 frases","mejor_respuesta":"respuesta sugerida actualizada usando solo sus datos (en el idioma de la entrevista)",'}"cambio":true|false}`;
+  try{
+    const out = await sample.json(prompt,{modelTier:"default",cache:false});
+    THREADS[id].push({role:"coach",text:out.respuesta||"Listo."});
+    if(!isGeneral && out.cambio){
+      if(out.calificacion) item.calificacion=out.calificacion;
+      if(out.comentario) item.comentario=out.comentario;
+      if(out.mejor_respuesta) item.mejor_respuesta=out.mejor_respuesta;
+      if(!S.result.items.includes(item)) S.result.items.push(Object.assign(item,{id}));
+      const node=$("it-"+id);
+      if(node){ node.querySelector(".pill").className="pill "+item.calificacion; node.querySelector(".pill").textContent=item.calificacion;
+        node.querySelector(".cmt").textContent=item.comentario;
+        const b=node.querySelector(".better"); if(item.mejor_respuesta){ b.hidden=false; b.querySelector("span").textContent=item.mejor_respuesta; } }
+    }
+    $("th-"+id).innerHTML=threadHtml(id);
+    box.value=""; $("cl-"+id).hidden=true; msg.hidden=true;
+  }catch(e){
+    THREADS[id].pop();
+    msg.textContent = e&&e.code==="rate_limited" ? "Demasiadas consultas seguidas. Espera un momento y vuelve a enviar." : "No pude revisar tu aclaración. Intenta enviarla de nuevo.";
+  }
+  btn.disabled=false;
+}
+$("results").addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t) return;
+  if(t.dataset.clar){ const c=$("cl-"+t.dataset.clar); c.hidden=false; $("ct-"+t.dataset.clar).focus(); }
+  else if(t.dataset.cancel){ $("cl-"+t.dataset.cancel).hidden=true; }
+  else if(t.dataset.send){ sendClarification(t.dataset.send); }
+});
+</script>
+</body>
+</html>
+
+</body></html>
